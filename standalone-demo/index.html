@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Texas Grant Attestation - standalone demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #534AB7;
+    --purple-dark: #3C3489;
+    --ink: #26215C;
+    --bg: #f4f3f8;
+    --card-bg: #ffffff;
+    --muted: #5f5e5a;
+    --border: rgba(0,0,0,0.12);
+    --success-bg: #E1F5EE;
+    --success-ink: #0F6E56;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: #2c2c2a;
+    font-family: "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6; padding: 28px 16px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: 360px 1fr; gap: 28px; align-items: start; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+
+  /* Fake Experience dashboard tile */
+  .tile { width: 340px; background: var(--card-bg); border: 0.5px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .tile-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 0.5px solid var(--border); }
+  .tile-head .dot { width: 18px; height: 18px; border-radius: 4px; background: var(--purple); display:inline-block; }
+  .tile-head span { font-size: 14px; font-weight: 500; }
+  .tile-body { padding: 16px; min-height: 96px; }
+
+  .instr { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .stmt { font-size: 14px; font-weight: 500; margin: 0 0 14px; }
+  label.opt { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 14px; cursor: pointer; }
+  label.opt input { width: 16px; height: 16px; accent-color: var(--purple); }
+  .submit-row { display: flex; justify-content: flex-end; margin-top: 14px; }
+  button { font-family: inherit; }
+  button.primary { background: var(--purple); color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-size: 14px; font-weight: 500; cursor: pointer; }
+  button.primary:hover { background: var(--purple-dark); }
+  button.primary:disabled { opacity: 0.6; cursor: default; }
+
+  .confirm { display: flex; gap: 10px; align-items: flex-start; background: var(--success-bg); border-radius: 8px; padding: 12px; }
+  .confirm svg { flex: 0 0 auto; margin-top: 2px; }
+  .confirm .t1 { font-weight: 500; font-size: 14px; color: var(--success-ink); margin: 0 0 4px; }
+  .confirm .t2 { font-size: 12px; color: var(--success-ink); margin: 0; }
+
+  /* "card hidden" representation - in real Experience the tile would not render */
+  .hidden-note { border: 1px dashed var(--border); border-radius: 12px; padding: 20px 16px; text-align: center; color: var(--muted); font-size: 12px; width: 340px; }
+
+  /* Controls + explainer */
+  .panel { background: #fff; border: 0.5px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .panel h2 { font-size: 14px; font-weight: 500; margin: 0 0 10px; }
+  .ctl { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+  .ctl:last-of-type { border-bottom: none; }
+  .switch { position: relative; width: 40px; height: 22px; }
+  .switch input { display: none; }
+  .slider { position: absolute; inset: 0; background: #ccc; border-radius: 999px; transition: .15s; cursor: pointer; }
+  .slider::before { content:""; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.15s; }
+  .switch input:checked + .slider { background: var(--purple); }
+  .switch input:checked + .slider::before { transform: translateX(18px); }
+  .state-line { margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .state-line b { color: var(--ink); }
+  .reload { margin-top: 12px; background: transparent; border: 0.5px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer; }
+  .reload:hover { background: var(--bg); }
+  .flow { margin-top: 18px; font-size: 12px; color: var(--muted); }
+  .flow code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+  .flow ol { padding-left: 18px; margin: 6px 0; }
+  .flow li { margin: 4px 0; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div>
+      <h1>Texas Grant Attestation</h1>
+      <p class="sub">Standalone demo &mdash; reproduces the card's visibility logic offline. Not the real Ellucian Design System components; for learning the behavior &amp; flow.</p>
+      <div id="mount"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Simulate</h2>
+      <div class="ctl">
+        <span>Student awarded a Texas grant</span>
+        <label class="switch"><input type="checkbox" id="eligible" checked><span class="slider"></span></label>
+      </div>
+      <div class="ctl">
+        <span>Already submitted (prior session)</span>
+        <label class="switch"><input type="checkbox" id="prior"><span class="slider"></span></label>
+      </div>
+      <button class="reload" id="reload">&#x21bb; Reload card (simulate fresh dashboard load)</button>
+      <div class="state-line">Computed state: <b id="stateName">&mdash;</b></div>
+
+      <div class="flow">
+        <h2 style="margin-top:18px;">How this maps to the real flow</h2>
+        <ol>
+          <li>Experience card loads &rarr; calls a <b>Data Connect</b> GET pipeline.</li>
+          <li>Pipeline resolves the student via <b>Ethos</b> <code>persons</code>, checks eligibility with <code>award-maintenance</code> (RPRAWRD) and reads any existing row from <code>applicant-requirements</code> (RRAAREQ).</li>
+          <li>Card shows the form only if <b>eligible</b> and <b>no row yet</b>.</li>
+          <li>On submit &rarr; POST pipeline writes the answer to <b>Banner RRAAREQ</b> via the <code>applicant_requirements</code> Business API.</li>
+          <li>Next load: a row exists &rarr; card renders nothing (no re-submission).</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var store = { recorded: null };        // the "Banner RRAAREQ row": {answer, date} | null
+  var mountSubmitted = false;            // submitted during the current mount
+  var selected = null;                   // 'yes' | 'no'
+  var busy = false;
+
+  var el = function (id) { return document.getElementById(id); };
+  var today = function () { return new Date().toISOString().slice(0, 10); };
+
+  function computeState() {
+    var eligible = el('eligible').checked;
+    if (!eligible) return 'hidden-ineligible';
+    if (store.recorded && !mountSubmitted) return 'hidden-submitted';
+    if (mountSubmitted) return 'confirmation';
+    return 'form';
+  }
+
+  function render() {
+    var state = computeState();
+    var label = { 'hidden-ineligible':'Hidden (not a Texas grant recipient)',
+                  'hidden-submitted':'Hidden (already submitted - final)',
+                  'confirmation':'Confirmation (just submitted)',
+                  'form':'Attestation form' }[state];
+    el('stateName').textContent = label;
+
+    var mount = el('mount');
+
+    if (state === 'hidden-ineligible' || state === 'hidden-submitted') {
+      mount.innerHTML = '<div class="hidden-note">No card shown &mdash; ' +
+        (state === 'hidden-ineligible' ? 'student has no Texas grant award' : 'response already recorded; resubmission is blocked') +
+        '</div>';
+      return;
+    }
+
+    var head = '<div class="tile"><div class="tile-head"><i class="dot"></i><span>Texas Grant Attestation</span></div><div class="tile-body">';
+    var foot = '</div></div>';
+
+    if (state === 'confirmation') {
+      var yes = store.recorded.answer === true;
+      mount.innerHTML = head +
+        '<div class="confirm">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>' +
+          '<div><p class="t1">Thank you. Your response has been recorded and is final.</p>' +
+          '<p class="t2">' + (yes
+            ? 'You attested you have no felony convictions or crimes involving a controlled substance.'
+            : 'You were unable to attest to having no felony convictions or crimes involving a controlled substance.') +
+          ' Recorded on ' + store.recorded.date + '.</p></div>' +
+        '</div>' + foot;
+      return;
+    }
+
+    mount.innerHTML = head +
+      '<p class="instr">As a condition of your Texas grant, you must attest to the following:</p>' +
+      '<p class="stmt">I have no felony convictions or crimes involving a controlled substance.</p>' +
+      '<label class="opt"><input type="radio" name="ans" value="yes"' + (selected==='yes'?' checked':'') + '> Yes, I attest this is true</label>' +
+      '<label class="opt"><input type="radio" name="ans" value="no"' + (selected==='no'?' checked':'') + '> No, I cannot attest to this</label>' +
+      '<div class="submit-row"><button class="primary" id="submit"' + (busy?' disabled':'') + '>' + (busy?'Saving...':'Submit') + '</button></div>' +
+      foot;
+
+    var radios = mount.querySelectorAll('input[name="ans"]');
+    radios.forEach(function (r) { r.addEventListener('change', function () { selected = this.value; }); });
+    el('submit').addEventListener('click', onSubmit);
+  }
+
+  function onSubmit() {
+    if (selected !== 'yes' && selected !== 'no') { alert('Please select a response before submitting.'); return; }
+    busy = true; render();
+    setTimeout(function () {                 // simulate the POST to Banner RRAAREQ
+      store.recorded = { answer: selected === 'yes', date: today() };
+      mountSubmitted = true; busy = false; render();
+    }, 450);
+  }
+
+  el('eligible').addEventListener('change', render);
+  el('prior').addEventListener('change', function () {
+    store.recorded = this.checked ? { answer: true, date: today() } : null;
+    mountSubmitted = false; selected = null; render();
+  });
+  el('reload').addEventListener('click', function () {
+    mountSubmitted = false; selected = null; busy = false; render();   // fresh mount: a prior row now hides the card
+  });
+
+  render();
+</script>
+</body>
+</html>

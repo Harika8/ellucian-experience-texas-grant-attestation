@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+.env
+.DS_Store
+
+# standalone harness build artifact (rebuild with `npm run build-standalone`)
+extension/standalone/bundle.js
+extension/standalone/bundle.js.map

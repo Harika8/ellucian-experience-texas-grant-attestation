@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+*.log
+
+standalone/bundle.js
+standalone/bundle.js.map

@@ -1,0 +1,20 @@
+{
+    "messages": {
+        "TexasGrant.title": "Texas Grant Attestation",
+        "TexasGrant.contactAdministrator": "Contact Your Administrator",
+        "TexasGrant.dataError": "There was an error retrieving your attestation information",
+        "TexasGrant.notConfigured": "The card is not yet configured or configuration is not available except on Step 2 \"Configuration\"",
+        "TexasGrant.instructions": "As a condition of your Texas grant, you must attest to the following:",
+        "TexasGrant.statement": "I have no felony convictions or crimes involving a controlled substance.",
+        "TexasGrant.answerYes": "Yes, I attest this is true",
+        "TexasGrant.answerNo": "No, I cannot attest to this",
+        "TexasGrant.submit": "Submit",
+        "TexasGrant.thankYou": "Thank you. Your response has been recorded and is final.",
+        "TexasGrant.recorded": "Your response was recorded on {date}.",
+        "TexasGrant.recordedYes": "Recorded response: You attested you have no felony convictions or crimes involving a controlled substance.",
+        "TexasGrant.recordedNo": "Recorded response: You were unable to attest to having no felony convictions or crimes involving a controlled substance.",
+        "TexasGrant.saveSuccess": "Your response was recorded.",
+        "TexasGrant.saveError": "Your response could not be saved. Please try again or contact your administrator.",
+        "TexasGrant.selectAnswer": "Please select a response before submitting."
+    }
+}

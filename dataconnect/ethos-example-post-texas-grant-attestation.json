@@ -1,0 +1,127 @@
+{
+  "name": "ethos-example-post-texas-grant-attestation",
+  "parameters": [
+    {
+      "name": "ethosApiKey",
+      "type": "string",
+      "required": true,
+      "sensitive": true
+    },
+    {
+      "name": "testPersonId",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "aidYear",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "texasGrantFundCodes",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "attestationTreqCode",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "trstCodeYes",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "trstCodeNo",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "apiDefinition": {
+    "authType": "userToken",
+    "httpVerb": "POST"
+  },
+  "pipeline": [
+    "Set up user",
+    "Get Person",
+    "Resolve bannerId",
+    "Get awards",
+    "Check eligibility",
+    "Build requirement body",
+    "Post applicant-requirements"
+  ],
+  "segments": {
+    "Set up user": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  const contextUser = context.get('__user');\n  const testPersonId = context.get('testPersonId');\n\n  const personId = contextUser?.id || testPersonId;\n\n  // Preserve the inbound answer ({ answer: true|false }) for later segments\n  const { payload: { answer } = {} } = message;\n  context.set('answer', answer === true);\n  context.set('personId', personId);\n\n  return { payload: { personId } };\n}\n"
+      }
+    },
+    "Get Person": {
+      "class": "ethosProxyGet",
+      "config": {
+        "resource": "persons",
+        "acceptVersions": [
+          "12"
+        ],
+        "idFromPayload": "$.personId",
+        "cache": false,
+        "ignoreErrors": false
+      }
+    },
+    "Resolve bannerId": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  const { payload, payload: { credentials } = {} } = message;\n\n  const bannerCredential = (credentials || []).find(c => c.type === 'bannerId');\n  const bannerId = bannerCredential && bannerCredential.value;\n\n  if (!bannerId) {\n    const msg = 'Unable to resolve Banner ID for the current user';\n    context.set('__httpStatusCode', 404);\n    context.set('__httpStatusMessage', {\n      correlationId: context['__runId'],\n      component: context['__pipelineName'] + ':Resolve bannerId',\n      error: '404',\n      message: msg\n    });\n    throw new Error(msg);\n  }\n\n  context.set('bannerId', bannerId);\n\n  return { ...message, payload: { ...payload, bannerId } };\n}\n"
+      }
+    },
+    "Get awards": {
+      "class": "ethosProxyGetFilter",
+      "config": {
+        "resource": "award-maintenance",
+        "filter": "?id={{{context.bannerId}}}&keyblckAidyCode={{{context.aidYear}}}",
+        "acceptVersions": [
+          "1.0.0"
+        ],
+        "cache": false,
+        "queryByPost": false,
+        "ignoreErrors": true
+      }
+    },
+    "Check eligibility": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  const awards = Array.isArray(message.payload) ? message.payload : [];\n  const fundCodes = String(context.get('texasGrantFundCodes') || '')\n    .split(',')\n    .map(s => s.trim().toUpperCase())\n    .filter(Boolean);\n\n  const eligible = awards.some(a => a && fundCodes.includes(String(a.fundCode || '').toUpperCase()));\n\n  if (!eligible) {\n    const msg = 'Student is not awarded a Texas grant and may not submit this attestation';\n    context.set('__httpStatusCode', 403);\n    context.set('__httpStatusMessage', {\n      correlationId: context['__runId'],\n      component: context['__pipelineName'] + ':Check eligibility',\n      error: '403',\n      message: msg\n    });\n    throw new Error(msg);\n  }\n\n  return { payload: {} };\n}\n"
+      }
+    },
+    "Build requirement body": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  const answer = context.get('answer') === true;\n  const trstCode = answer ? context.get('trstCodeYes') : context.get('trstCodeNo');\n\n  // RRRAREQ_STAT_DATE - today, formatted yyyy-mm-dd\n  const now = new Date();\n  const statDate = now.toISOString().slice(0, 10);\n\n  const postBody = {\n    keyblckId: context.get('bannerId'),\n    keyblckAidyCode: context.get('aidYear'),\n    treqCode: context.get('attestationTreqCode'),\n    trstCode: trstCode,\n    statDate: statDate\n  };\n\n  return { payload: postBody };\n}\n"
+      }
+    },
+    "Post applicant-requirements": {
+      "class": "ethosProxyPost",
+      "config": {
+        "resource": "applicant-requirements",
+        "contentVersion": "1.0.0",
+        "acceptVersion": "1.0.0",
+        "bodyPath": "$",
+        "ignoreErrors": false
+      }
+    }
+  }
+}

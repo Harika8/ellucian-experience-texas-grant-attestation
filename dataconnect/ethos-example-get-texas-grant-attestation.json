@@ -1,0 +1,135 @@
+{
+  "name": "ethos-example-get-texas-grant-attestation",
+  "parameters": [
+    {
+      "name": "ethosApiKey",
+      "type": "string",
+      "required": true,
+      "sensitive": true
+    },
+    {
+      "name": "testPersonId",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "aidYear",
+      "type": "string",
+      "required": true,
+      "description": "Aid year - RRRAREQ_KEYBLCK_AIDY_CODE / RPRAWRD_KEYBLCK_AIDY_CODE, e.g. 2526"
+    },
+    {
+      "name": "texasGrantFundCodes",
+      "type": "string",
+      "required": true,
+      "description": "Comma-separated Texas grant fund code(s) - RPRAWRD_FUND_CODE, e.g. TXEG,TPEG"
+    },
+    {
+      "name": "attestationTreqCode",
+      "type": "string",
+      "required": true,
+      "description": "Tracking requirement code for the felony/controlled-substance attestation - RRRAREQ_TREQ_CODE"
+    },
+    {
+      "name": "trstCodeYes",
+      "type": "string",
+      "required": true,
+      "description": "Status code recorded when the student attests YES - RRRAREQ_TRST_CODE"
+    },
+    {
+      "name": "trstCodeNo",
+      "type": "string",
+      "required": true,
+      "description": "Status code recorded when the student attests NO - RRRAREQ_TRST_CODE"
+    }
+  ],
+  "apiDefinition": {
+    "authType": "userToken",
+    "httpVerb": "GET"
+  },
+  "pipeline": [
+    "Set up user",
+    "Get Person",
+    "Resolve bannerId",
+    "Get awards",
+    "Stash awards",
+    "Get requirements",
+    "Compose result"
+  ],
+  "segments": {
+    "Set up user": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  const contextUser = context.get('__user');\n  const testPersonId = context.get('testPersonId');\n\n  const personId = contextUser?.id || testPersonId;\n\n  context.set('personId', personId);\n\n  return { payload: { personId } };\n}\n"
+      }
+    },
+    "Get Person": {
+      "class": "ethosProxyGet",
+      "config": {
+        "resource": "persons",
+        "acceptVersions": [
+          "12"
+        ],
+        "idFromPayload": "$.personId",
+        "cache": false,
+        "ignoreErrors": false
+      }
+    },
+    "Resolve bannerId": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  const { payload, payload: { credentials } = {} } = message;\n\n  const bannerCredential = (credentials || []).find(c => c.type === 'bannerId');\n  const bannerId = bannerCredential && bannerCredential.value;\n\n  if (!bannerId) {\n    const msg = 'Unable to resolve Banner ID for the current user';\n    context.set('__httpStatusCode', 404);\n    context.set('__httpStatusMessage', {\n      correlationId: context['__runId'],\n      component: context['__pipelineName'] + ':Resolve bannerId',\n      error: '404',\n      message: msg\n    });\n    throw new Error(msg);\n  }\n\n  context.set('bannerId', bannerId);\n\n  return { ...message, payload: { ...payload, bannerId } };\n}\n"
+      }
+    },
+    "Get awards": {
+      "class": "ethosProxyGetFilter",
+      "config": {
+        "resource": "award-maintenance",
+        "filter": "?id={{{context.bannerId}}}&keyblckAidyCode={{{context.aidYear}}}",
+        "acceptVersions": [
+          "1.0.0"
+        ],
+        "cache": false,
+        "queryByPost": false,
+        "ignoreErrors": true
+      }
+    },
+    "Stash awards": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  // award_maintenance (RPRAWRD) rows for this student + aid year\n  const awards = Array.isArray(message.payload) ? message.payload : [];\n  context.set('awards', awards);\n  return { payload: {} };\n}\n"
+      }
+    },
+    "Get requirements": {
+      "class": "ethosProxyGetFilter",
+      "config": {
+        "resource": "applicant-requirements",
+        "filter": "?keyblckId={{{context.bannerId}}}&keyblckAidyCode={{{context.aidYear}}}&treqCode={{{context.attestationTreqCode}}}",
+        "acceptVersions": [
+          "1.0.0"
+        ],
+        "cache": false,
+        "queryByPost": false,
+        "ignoreErrors": true
+      }
+    },
+    "Compose result": {
+      "class": "JavaScriptTransform",
+      "config": {
+        "pushUndefined": true,
+        "stopOnError": false,
+        "draft": false,
+        "code": "function transform (message, context) {\n  // applicant_requirements (RRAAREQ) rows for this student + aid year + treqCode\n  const requirements = Array.isArray(message.payload) ? message.payload : [];\n\n  const awards = context.get('awards') || [];\n  const aidYear = context.get('aidYear');\n  const bannerId = context.get('bannerId');\n  const treqCode = context.get('attestationTreqCode');\n  const trstYes = context.get('trstCodeYes');\n  const trstNo = context.get('trstCodeNo');\n\n  const fundCodes = String(context.get('texasGrantFundCodes') || '')\n    .split(',')\n    .map(s => s.trim().toUpperCase())\n    .filter(Boolean);\n\n  const eligible = awards.some(a => a && fundCodes.includes(String(a.fundCode || '').toUpperCase()));\n\n  // Find an existing attestation row for the configured requirement code\n  const existing = requirements.find(r => r && String(r.treqCode) === String(treqCode));\n\n  let currentAnswer = null;\n  let statDate = null;\n  if (existing) {\n    statDate = existing.statDate || null;\n    if (String(existing.trstCode) === String(trstYes)) {\n      currentAnswer = true;\n    } else if (String(existing.trstCode) === String(trstNo)) {\n      currentAnswer = false;\n    }\n  }\n\n  return {\n    payload: {\n      eligible,\n      bannerId,\n      aidYear,\n      currentAnswer,\n      currentStatus: existing ? existing.trstCode : null,\n      statDate\n    }\n  };\n}\n"
+      }
+    }
+  }
+}
