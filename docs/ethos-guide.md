@@ -30,5 +30,3 @@ Before students use the card, a financial-aid administrator must:
 1. Define the **status** codes on RTVTRST for the YES and NO answers (used as `trstCodeYes` / `trstCodeNo`).
 1. Confirm the **fund code(s)** that represent a Texas grant on RFRBASE (used as `texasGrantFundCodes`).
 1. Confirm the current **aid year** code (used as `aidYear`).
-
-Copyright 2025 Ellucian Company L.P. and its affiliates.

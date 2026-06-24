@@ -63,7 +63,3 @@ For each JSON file:
 
 Grant the **Execute** permission on both APIs to a role that contains your students
 (Experience Setup → PERMISSIONS → DATA CONNECT → APIs → your package).
-
-<br/>
-
-Copyright 2025 Ellucian Company L.P. and its affiliates.

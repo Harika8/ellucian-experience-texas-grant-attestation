@@ -1,5 +1,3 @@
-// Copyright 2025 Ellucian Company L.P. and its affiliates.
-//
 // Offline mock data layer. Enabled when USE_MOCK_DATA=true (see .env). Lets the
 // card run with `npm start` without any Ethos / Data Connect backend, so the UI
 // can be built and demoed locally. None of this code path touches the network.
@@ -47,3 +45,4 @@ export async function recordMockAttestation({ answer }) {
     logger.debug('mock attestation recorded:', { answer: store.currentAnswer, statDate: store.statDate });
     return { status: 'success', data: getMockAttestation() };
 }
+

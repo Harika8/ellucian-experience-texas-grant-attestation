@@ -1,5 +1,3 @@
-// Copyright 2025 Ellucian Company L.P. and its affiliates.
-//
 // Presentational view - no SDK data/network hooks, so it renders in the live
 // Experience runtime, the offline mock path, AND the standalone React+EDS harness.
 // Data and the record callback come in as props.
@@ -279,3 +277,4 @@ AttestationView.propTypes = {
     inPreviewMode: PropTypes.bool,
     onRecord: PropTypes.func.isRequired
 };
+

@@ -104,7 +104,3 @@ extension/
     i18n/                            en.json + intl plumbing
     util/                            events + log-level helpers
 ```
-
-<br/>
-
-Copyright 2025 Ellucian Company L.P. and its affiliates.

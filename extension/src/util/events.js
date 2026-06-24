@@ -1,5 +1,3 @@
-// Copyright 2025 Ellucian Company L.P. and its affiliates.
-
 import { useCallback, useEffect } from 'react';
 
 // create a non-visible document element

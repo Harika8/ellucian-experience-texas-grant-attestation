@@ -1,5 +1,3 @@
-// Copyright 2025 Ellucian Company L.P. and its affiliates.
-
 import log from 'loglevel';
 
 export function initializeLogging(name) {

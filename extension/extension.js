@@ -1,5 +1,3 @@
-// Copyright 2025 Ellucian Company L.P. and its affiliates.
-
 module.exports = {
     name: 'texas-grant-attestation',
     publisher: process.env.PUBLISHER,

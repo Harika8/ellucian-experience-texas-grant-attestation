@@ -1,5 +1,3 @@
-// Copyright 2025 Ellucian Company L.P. and its affiliates.
-
 import { useEffect, useMemo } from 'react';
 
 import { useDataQuery } from '@ellucian/experience-extension-extras';

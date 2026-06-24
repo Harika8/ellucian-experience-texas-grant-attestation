@@ -1,5 +1,3 @@
-// Copyright 2025 Ellucian Company L.P. and its affiliates.
-//
 // Standalone harness entry. Renders the real AttestationView (Ellucian Design
 // System components) with an in-page mock data layer and simple controls, so the
 // card can be seen and clicked in a plain browser - no Experience tenant, no Ethos,
@@ -137,3 +135,4 @@ root.render(
         <App />
     </EDSApplication>
 );
+
